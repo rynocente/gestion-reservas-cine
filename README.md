@@ -253,3 +253,12 @@ curl -s -X PATCH http://localhost:51200/api/v1/bookings/<BOOKING_ID>/cancel \
 - **Instancia configurada:** `movieServiceRetry`
 - **Reintentos máximos:** 3 intentos con retroceso exponencial (`waitDuration: 500ms`, `multiplier: 2`).
 - **Filtro de excepciones:** Se reintenta únicamente ante errores de servidor (`5xx`) o fallos de red (`ResourceAccessException`). Las excepciones de negocio (como `NoSeatsAvailableException` / `422`) se descartan para no realizar reintentos innecesarios.
+
+
+---
+
+## 📌 Notas y Consideraciones
+
+1. **Requisitos Opcionales (Extras):** De las opciones listadas en la rúbrica, **solo se implementó Apache Kafka** para el manejo de eventos (topic `cinema.bookings`). Se omitió el uso de Service Discovery (Eureka Server) y Config Server.
+2. **Reutilización de Infraestructura:** Si ya se cuenta con una instancia de PostgreSQL en ejecución (por ejemplo, la infraestructura general del curso), no es estrictamente necesario levantar el contenedor de BD provisto en este proyecto. Bastará con ejecutar el script `create-databases.sql` (`CREATE DATABASE moviedb; CREATE DATABASE bookingdb;`) directamente en la instancia existente.
+3. **Accesibilidad Pública:** En cumplimiento con los requisitos del proyecto, las interfaces de Swagger UI (`/swagger-ui.html`, `/v3/api-docs`) y los endpoints de monitoreo de Actuator (`/actuator/health`) están explícitamente configurados como de acceso público (`permitAll`) y no requieren provisión del token JWT.
