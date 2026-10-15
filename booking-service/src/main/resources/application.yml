@@ -1,0 +1,84 @@
+﻿server:
+  port: 51200
+  shutdown: graceful
+  servlet:
+    context-path: /api/v1
+spring:
+  application:
+    name: booking-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/bookingdb
+    username: ${POSTGRES_USER:admin}
+    password: ${POSTGRES_PASSWORD:admin123}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+  jackson:
+    mapper:
+      accept-case-insensitive-enums: true
+  kafka:
+      bootstrap-servers: localhost:29092
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # URL directa al auth-service para descargar la llave pública RSA
+          jwk-set-uri: http://localhost:50003/oauth2/jwks
+          # Opcional: Validar que el token haya sido emitido por este servidor exacto
+          issuer-uri: http://localhost:50003
+
+services:
+  movie-service:
+    url: http://localhost:51100/api/v1
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    try-it-out-enabled: true
+    operationsSorter: method
+    tagsSorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  show-actuator: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      show-details: always
+
+resilience4j:
+
+  # ── Retry ─────────────────────────────────────────────────────
+  # Cuándo abrir: fallos transitorios (red, timeout corto, reinicio de instancia).
+  # NO usar para errores de negocio (404 / 422) — solo para errores de infraestructura.
+  retry:
+    instances:
+      movieServiceRetry:
+        maxAttempts: 3
+        # Espera entre reintentos — en producción usar backoff exponencial
+        waitDuration: 500ms
+        enableExponentialBackoff: true # Activa el backoff exponencial
+        exponentialBackoffMultiplier: 2
+        # Solo reintentar en errores de servidor (5xx) o problemas de red
+        retryExceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - org.springframework.web.client.ResourceAccessException
+          - java.lang.RuntimeException
+        # Excepciones que NO deben reintentarse (errores del cliente)
+        ignoreExceptions:
+          - com.mitocode.cine.booking.exception.NoSeatsAvailableException
+
+logging:
+  level:
+    com.mitocode.cine: DEBUG
+        
+

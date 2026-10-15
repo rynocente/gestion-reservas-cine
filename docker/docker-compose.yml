@@ -1,0 +1,199 @@
+services:
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # BASE DE DATOS — PostgreSQL (instancia única)
+  #
+  # Un solo contenedor PostgreSQL con múltiples bases de datos.
+  # Cada microservicio tiene su propia BD para respetar el patrón
+  # Database-per-Service, pero comparten la misma instancia en desarrollo
+  # para ahorrar recursos.
+  #
+  # Acceso externo (desde el host): localhost:5432
+  # Acceso interno (entre servicios): postgres-ms:5432
+  #
+  # Las BDs adicionales se crean mediante el script init-db/create-databases.sql
+  # que PostgreSQL ejecuta automáticamente la primera vez que arranca.
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  postgres-ms:
+    image: postgres:16-alpine
+    container_name: postgres-ms
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: productdb
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - ecommerce-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d productdb" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # HERRAMIENTA DE ADMINISTRACIÓN — pgAdmin
+  # Interfaz web para gestionar las bases de datos PostgreSQL
+  # Acceso: http://localhost:5050
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+    ports:
+      - "5050:80"
+    networks:
+      - ecommerce-network
+    depends_on:
+      postgres-ms:
+        condition: service_healthy
+
+
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # PORTAINER — UI para gestionar contenedores Docker en tiempo real
+  # Acceso: http://localhost:9001
+  # Primer acceso: crear usuario admin con contraseña (mínimo 12 chars)
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    ports:
+      - "9001:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer-data:/data
+    networks:
+      - ecommerce-network
+
+
+
+  kafka:
+    image: confluentinc/cp-kafka:7.7.0
+    container_name: kafka
+    ports:
+      - "29092:29092"   # host → microservicios del host usan localhost:29092
+      - "9092:9092"     # red Docker interna → otros contenedores usan kafka:9092
+    environment:
+      # ── Identidad del nodo ───────────────────────────────────────────────────
+      # ID único del nodo en el clúster (cada broker/controller necesita uno distinto)
+      KAFKA_NODE_ID: 1
+
+      # En KRaft, un nodo puede ser broker, controller, o ambos.
+      # "broker,controller" → clúster de un solo nodo que cumple ambos roles.
+      KAFKA_PROCESS_ROLES: broker,controller
+
+      # ── Quórum del controlador (KRaft) ──────────────────────────────────────
+      # Lista de nodos que participan en el quórum: {nodeId}@{host}:{puertoController}
+      # Con un solo nodo, el quórum es simplemente este mismo nodo.
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+
+      # ── Configuración de listeners ──────────────────────────────────────────
+      # Interfaces y puertos en los que Kafka escucha conexiones entrantes.
+      # Formato: {NOMBRE_LISTENER}://{interfaz}:{puerto}
+      # 0.0.0.0 → escucha en todas las interfaces de red del contenedor
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:29092
+
+      # Direcciones que Kafka anuncia a los clientes para que se conecten.
+      # Debe coincidir con los hosts accesibles desde cada tipo de cliente.
+      # CONTROLLER no se anuncia → es solo para comunicación interna del clúster.
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+
+      # Mapeo de nombre de listener → protocolo de seguridad.
+      # PLAINTEXT = sin TLS, sin autenticación (válido para desarrollo).
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+
+      # Nombre del listener exclusivo para la comunicación del controlador KRaft.
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+      # Nombre del listener que usan los brokers para comunicarse entre sí.
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      # ── Topics internos ─────────────────────────────────────────────────────
+      # Factor de réplica del topic interno __consumer_offsets
+      # (guarda los offsets de los consumer groups). 1 = sin réplicas = dev only.
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+      # Factor de réplica del log de transacciones (para producers idempotentes).
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+      # Número mínimo de réplicas en sincronía (ISR = In-Sync Replicas)
+      # necesarias para que una escritura transaccional sea exitosa.
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+      # Auto-crear topics cuando un producer o consumer los referencia por primera vez.
+      # Conveniente en dev; en producción se prefiere gestión explícita de topics.
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+
+      # ── Identidad del clúster (KRaft) ────────────────────────────────────────
+      # ID único del clúster en Base64 (22 caracteres, generado una sola vez).
+      # Requerido en KRaft para que el nodo identifique el clúster al que pertenece.
+      # No cambiar una vez inicializado el volumen — causaría pérdida de datos.
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+    volumes:
+      - kafka-data-curso:/var/lib/kafka/data
+    networks:
+      - ecommerce-network
+    healthcheck:
+      test: [ "CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list" ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # KAFKA UI — Interfaz web para gestionar el clúster Kafka
+  #
+  # Permite ver topics, mensajes, consumer groups, offsets y lag en tiempo real.
+  # Muy útil para depurar flujos EDA: verificar que los mensajes se publican y
+  # que los consumidores los leen correctamente.
+  #
+  # Acceso: http://localhost:9000
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "9000:8080"
+    environment:
+      # Nombre del clúster en la UI (puede ser cualquier label descriptivo)
+      KAFKA_CLUSTERS_0_NAME: ecommerce
+      # Dirección del broker desde dentro de la red Docker
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - ecommerce-network
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RED — Todos los servicios comparten esta red para comunicarse por nombre
+# Ejemplo: postgres-ms:5432, payment-gateway-service:59900
+# ─────────────────────────────────────────────────────────────────────────────
+
+networks:
+  ecommerce-network:
+    name: ecommerce-network
+    driver: bridge
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VOLÚMENES — Persistencia de datos entre reinicios del contenedor
+# ─────────────────────────────────────────────────────────────────────────────
+
+volumes:
+  postgres-data:
+  portainer-data:
+  kafka-data-curso:

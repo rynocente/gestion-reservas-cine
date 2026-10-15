@@ -1,0 +1,56 @@
+﻿server:
+  port: 51100
+  shutdown: graceful
+  servlet:
+    context-path: /api/v1
+spring:
+  application:
+    name: movie-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/moviedb
+    username: ${POSTGRES_USER:admin}
+    password: ${POSTGRES_PASSWORD:admin123}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+  jackson:
+    mapper:
+      accept-case-insensitive-enums: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # URL directa al auth-service para descargar la llave pública RSA
+          jwk-set-uri: http://localhost:50003/oauth2/jwks
+          # Opcional: Validar que el token haya sido emitido por este servidor exacto
+          issuer-uri: http://localhost:50003
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      show-details: always
+
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    try-it-out-enabled: true
+    operationsSorter: method
+    tagsSorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  show-actuator: true
+
+logging:
+  level:
+    com.mitocode.movie: DEBUG

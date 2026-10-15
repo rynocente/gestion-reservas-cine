@@ -1,0 +1,455 @@
+{
+  "info": {
+    "_postman_id": "a4f26f20-ddb5-4765-822b-6a3f1c7f1a15",
+    "name": "Reservas Cine",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "56779172",
+    "_collection_link": "https://go.postman.co/collection/56779172-a4f26f20-ddb5-4765-822b-6a3f1c7f1a15?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Auth Service",
+      "item": [
+        {
+          "name": "POST Login JWT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {\r\n    const body = pm.response.json();\r\n    pm.collectionVariables.set(\"accessToken\", body.access_token);\r\n    pm.collectionVariables.set(\"refreshToken\", body.refresh_token);\r\n}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"username\": \"admin\",\r\n  \"password\": \"admin123\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:50003/api/v1/auth/login",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "50003",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actuator - Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:50003/actuator/health",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "50003",
+              "path": [
+                "actuator",
+                "health"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Movie Service",
+      "item": [
+        {
+          "name": "POST Crear Pelicula",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"title\": \"Interstellar2\",\r\n  \"director\": \"Christopher Nolan\",\r\n  \"genre\": \"SCI_FI\",\r\n  \"durationMin\": 169,\r\n  \"rating\": \"PG-13\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:51100/api/v1/movies",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "51100",
+              "path": [
+                "api",
+                "v1",
+                "movies"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH Activar Pelicula",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:51100/api/v1/movies/11111111-1111-1111-1111-111111111111/activate",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "51100",
+              "path": [
+                "api",
+                "v1",
+                "movies",
+                "11111111-1111-1111-1111-111111111111",
+                "activate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH Desactivar Pelicula",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:51100/api/v1/movies/11111111-1111-1111-1111-111111111111/deactivate",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "51100",
+              "path": [
+                "api",
+                "v1",
+                "movies",
+                "11111111-1111-1111-1111-111111111111",
+                "deactivate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Peliculas",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:51100/api/v1/movies",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "51100",
+              "path": [
+                "api",
+                "v1",
+                "movies"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Funciones",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:51100/api/v1/screenings",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "51100",
+              "path": [
+                "api",
+                "v1",
+                "screenings"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Crear Funcion",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"movieId\": \"11111111-1111-1111-1111-111111111111\",\r\n  \"room\": \"Sala 8 IMAX\",\r\n  \"showAt\": \"2026-10-20T19:30:00\",\r\n  \"totalSeats\": 40\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:51100/api/v1/screenings",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "51100",
+              "path": [
+                "api",
+                "v1",
+                "screenings"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actuator - Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:51100/api/v1/actuator/health",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "51100",
+              "path": [
+                "api",
+                "v1",
+                "actuator",
+                "health"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Booking Service",
+      "item": [
+        {
+          "name": "POST Crear Reserva (SAGA)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"screeningId\": \"33333333-3333-3333-3333-333333333333\",\r\n  \"customerId\": \"987e6543-e21b-12d3-a456-426614174000\",\r\n  \"totalAmount\": 25.5\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:51200/api/v1/bookings",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "51200",
+              "path": [
+                "api",
+                "v1",
+                "bookings"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Reserva by Id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:51200/api/v1/bookings/9958ef58-033e-4373-aae9-22ebe2cbc141",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "51200",
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "9958ef58-033e-4373-aae9-22ebe2cbc141"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH Cancelar Reserva",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:51200/api/v1/bookings/9958ef58-033e-4373-aae9-22ebe2cbc141/cancel",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "51200",
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "9958ef58-033e-4373-aae9-22ebe2cbc141",
+                "cancel"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actuator - Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:51200/api/v1/actuator/health",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "51200",
+              "path": [
+                "api",
+                "v1",
+                "actuator",
+                "health"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    }
+  ]
+}
